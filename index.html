@@ -251,17 +251,20 @@
                - First, try to match items to the REFERENCE CATEGORIES above.
                - IMPORTANT: If an item is clearly shown (e.g., Countertops, Backsplashes, Sinks, Stoves, Appliances) but NOT in the list, YOU MUST STILL EXTRACT IT. 
                - For these unlisted items, you must estimate a realistic 'market_rate' (Unit Price in THB) based on mid-to-premium Thai interior construction standards.
-            4. RISK AUDIT LOGIC (STRICT SEVERITY):
+            4. ITEM TAGGING (CROSS-PAGE DE-DUPLICATION):
+               - You MUST extract the architectural tag for the furniture/item (e.g., "BF-10", "C-01") and place it in 'item_tag'. 
+               - If the item has no tag, use "N/A". This is critical to prevent double-counting across pages.
+            5. RISK AUDIT LOGIC (STRICT SEVERITY):
                - CRITICAL: Any text mentioning "รอระบุ" (To Be Advised/Specified), especially for appliances. Missing appliance specs block countertop fabrication and the critical path!
                - WARNING: Any text mentioning "เช็คระยะหน้างาน" (Verify In Field / V.I.F.) or "หน้างาน" (On-site).
                - INFO: General notes or missing minor details.
-            5. DRAFTING VIEWS (DE-DUPLICATION): Consolidate multiple views (Plan, Elevation) into ONE takeoff item per furniture tag (e.g., BF-10).
+            6. DRAFTING VIEWS (DE-DUPLICATION): Consolidate multiple views (Plan, Elevation) into ONE takeoff item per furniture tag (e.g., BF-10) on this specific page.
 
             Return JSON ONLY:
             {
                 "verdict": "string summary",
                 "findings": [{ "severity": "critical|warning|info", "title": "string", "description": "string" }],
-                "takeoffItems": [{ "category": "Category Name", "qty": 0.00, "unit": "m|sqm|piece|point", "market_rate": 0 }]
+                "takeoffItems": [{ "item_tag": "string (e.g. BF-10 or N/A)", "category": "Category Name", "qty": 0.00, "unit": "m|sqm|piece|point", "market_rate": 0 }]
             }`;
 
             try {
@@ -318,7 +321,7 @@
                     const total = item.qty * finalRate;
                     totalBudget += total;
                     
-                    return { ...item, total, priceSource, unit, rateUsed: finalRate };
+                    return { ...item, total, priceSource, unit, rateUsed: finalRate, item_tag: item.item_tag || 'N/A' };
                 });
                 
                 aiResult.budgetItems = budgetItems;
@@ -373,9 +376,10 @@
             const bTable = document.getElementById('budget-table-body'); bTable.innerHTML = "";
             (data.budgetItems || []).forEach(item => {
                 const isAssumed = item.priceSource === 'Market Research';
+                const tagBadge = (item.item_tag && item.item_tag !== 'N/A') ? `<span class="text-[7px] bg-gray-100 text-gray-500 px-1 rounded ml-1 uppercase border border-gray-200">${item.item_tag}</span>` : '';
                 const sourceBadge = isAssumed ? '<span class="text-[7px] bg-burg-pale text-burg px-1 rounded ml-1 uppercase">Assumed</span>' : '';
                 const row = document.createElement('tr'); row.className = "border-b border-gray-50";
-                row.innerHTML = `<td class="px-4 py-3 font-medium ${isAssumed ? 'italic' : ''}">${item.category}${sourceBadge}</td><td class="px-4 py-3 text-right">${item.qty} ${item.unit}</td><td class="px-4 py-3 text-right font-bold text-vesta-navy">${item.total.toLocaleString()}</td>`;
+                row.innerHTML = `<td class="px-4 py-3 font-medium ${isAssumed ? 'italic' : ''}">${item.category}${tagBadge}${sourceBadge}</td><td class="px-4 py-3 text-right">${item.qty} ${item.unit}</td><td class="px-4 py-3 text-right font-bold text-vesta-navy">${item.total.toLocaleString()}</td>`;
                 bTable.appendChild(row);
             });
             switchTab('findings');
@@ -384,12 +388,35 @@
         function renderBatchSummary() {
             const list = document.getElementById('batch-summary-list'); list.innerHTML = "";
             let grandTotal = 0;
+            const seenTags = new Set();
+
             Object.entries(sessionAudits).forEach(([num, data]) => {
-                grandTotal += (data.totalBudget || 0);
+                let uniquePageTotal = 0;
+                let deduplicatedCount = 0;
+
+                (data.budgetItems || []).forEach(item => {
+                    const tag = (item.item_tag || 'N/A').toUpperCase().trim();
+                    const isUntagged = tag === 'N/A' || tag === 'NONE' || tag === '';
+                    
+                    if (isUntagged) {
+                        grandTotal += item.total;
+                        uniquePageTotal += item.total;
+                    } else if (!seenTags.has(tag)) {
+                        seenTags.add(tag);
+                        grandTotal += item.total;
+                        uniquePageTotal += item.total;
+                    } else {
+                        deduplicatedCount++; // Skip adding to Batch Total if we already billed for this tag
+                    }
+                });
+
                 const pageItem = document.createElement('div');
                 pageItem.className = "bg-white p-4 rounded-xl border border-gray-100 shadow-sm";
                 const sevCounts = data.findings.reduce((acc, f) => { acc[f.severity]++; return acc; }, { critical: 0, warning: 0, info: 0 });
-                pageItem.innerHTML = `<div class="flex justify-between items-center mb-2"><span class="text-[10px] font-bold uppercase text-vesta-navy">Page ${num}</span><span class="text-[11px] font-bold">฿${(data.totalBudget || 0).toLocaleString()}</span></div><div class="flex gap-2"><span class="text-[8px] px-1.5 py-0.5 rounded bg-red-50 text-red-600 font-bold">${sevCounts.critical} CRIT</span><span class="text-[8px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 font-bold">${sevCounts.warning} WARN</span></div>`;
+                
+                const dedupBadge = deduplicatedCount > 0 ? `<span class="text-[8px] bg-red-50 text-red-500 px-1 rounded ml-2 border border-red-100">-${deduplicatedCount} Duplicate(s)</span>` : '';
+
+                pageItem.innerHTML = `<div class="flex justify-between items-center mb-2"><span class="text-[10px] font-bold uppercase text-vesta-navy">Page ${num} ${dedupBadge}</span><div class="flex items-center gap-2"><span class="text-[10px] text-gray-400 line-through">฿${(data.totalBudget || 0).toLocaleString()}</span><span class="text-[11px] font-bold text-vesta-navy">฿${uniquePageTotal.toLocaleString()}</span></div></div><div class="flex gap-2"><span class="text-[8px] px-1.5 py-0.5 rounded bg-red-50 text-red-600 font-bold">${sevCounts.critical} CRIT</span><span class="text-[8px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 font-bold">${sevCounts.warning} WARN</span></div>`;
                 list.appendChild(pageItem);
             });
             document.getElementById('batch-total-budget').textContent = grandTotal.toLocaleString();
@@ -413,20 +440,44 @@
             const docName = document.getElementById('doc-name').textContent;
             let content = `VESTA DRAWCHECK SUMMARY - ${new Date().toLocaleString()}\nDocument: ${docName}\n==================================================\n\n`;
             let grandTotal = 0;
+            const seenTags = new Set();
+            const isBatch = dataList.length > 1;
+
             dataList.forEach((data, i) => {
-                grandTotal += (data.totalBudget || 0);
-                content += `PAGE ${pageNums[i]} REPORT | Score: ${data.healthScore}/100 | Total: ฿${(data.totalBudget || 0).toLocaleString()}\n`;
+                let uniquePageTotal = 0;
+                let pageItemsText = "";
+                
+                data.budgetItems.forEach(item => {
+                    const tag = (item.item_tag || 'N/A').toUpperCase().trim();
+                    const isUntagged = tag === 'N/A' || tag === 'NONE' || tag === '';
+                    let isDuplicate = false;
+
+                    // Deduplication logic for batch exports
+                    if (isUntagged || !isBatch) {
+                        grandTotal += item.total;
+                        uniquePageTotal += item.total;
+                    } else if (!seenTags.has(tag)) {
+                        seenTags.add(tag);
+                        grandTotal += item.total;
+                        uniquePageTotal += item.total;
+                    } else {
+                        isDuplicate = true;
+                    }
+
+                    const src = item.priceSource === 'Market Research' ? '[ASSUMED]' : '[OFFICIAL]';
+                    const dupMarker = isDuplicate ? ' [DEDUPLICATED]' : '';
+                    pageItemsText += ` - [${tag}] ${item.category.padEnd(25)} | ${item.qty} ${item.unit.padEnd(5)} | ฿${item.total.toLocaleString().padEnd(10)} | ${src}${dupMarker}\n`;
+                });
+
+                content += `PAGE ${pageNums[i]} REPORT | Score: ${data.healthScore}/100 | ${isBatch ? 'Net Batch Contribution' : 'Total'}: ฿${uniquePageTotal.toLocaleString()}\n`;
                 content += `Verdict: ${data.verdict}\n\nFindings:\n`;
                 data.findings.forEach(f => content += ` - [${f.severity.toUpperCase()}] ${f.title}: ${f.description}\n`);
-                content += `\nBudget Items:\n`;
-                data.budgetItems.forEach(item => {
-                    const src = item.priceSource === 'Market Research' ? '[ASSUMED]' : '[OFFICIAL]';
-                    content += ` - ${item.category.padEnd(25)} | ${item.qty} ${item.unit.padEnd(5)} | ฿${item.total.toLocaleString().padEnd(10)} | ${src}\n`;
-                });
-                content += `\n\n`;
+                content += `\nBudget Items:\n` + pageItemsText + `\n\n`;
             });
-            if (dataList.length > 1) content += `==================================================\nGRAND BATCH TOTAL: ฿${grandTotal.toLocaleString()}\n==================================================\n\n`;
-            content += `RISK CATEGORY LEGEND & DEDUCTION LOGIC\n--------------------------------------------------\nCRITICAL (-15 pts): Procurement blocks (e.g. "รอระบุ"), \n                    structural clashes, or safety violations.\nWARNING  (-5 pts) : Field coordination (e.g. "หน้างาน" / V.I.F.),\n                    material substitutions, or ergonomic risks.\nINFO     (-2 pts) : General notations or drafting best practices.\n\nNOTE: Final readiness score is clamped at a minimum of 0.\n`;
+
+            if (isBatch) content += `==================================================\nGRAND BATCH TOTAL: ฿${grandTotal.toLocaleString()}\n==================================================\n\n`;
+            content += `RISK CATEGORY LEGEND & DEDUCTION LOGIC\n--------------------------------------------------\nCRITICAL (-15 pts): Procurement blocks (e.g. "รอระบุ")\nWARNING  (-5 pts) : Field coordination (e.g. "หน้างาน" / V.I.F.)\nINFO     (-2 pts) : General notations\n\nNOTE: Batch totals automatically deduplicate items sharing the same architectural tag (e.g., BF-10) across multiple pages.\n`;
+            
             const blob = new Blob([content], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a'); a.href = url; a.download = `${prefix}.txt`; a.click();
