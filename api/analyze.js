@@ -1,4 +1,4 @@
-// VESTA DrawCheck Secure Bridge (Production v1.0)
+// VESTA DrawCheck Secure Bridge (Stabilized v1.1)
 export default async function handler(req, res) {
     const apiKey = process.env.GEMINI_API_KEY;
     
@@ -13,9 +13,9 @@ export default async function handler(req, res) {
     }
 
     try {
-        // USE THE STABLE V1 ENDPOINT FOR PRODUCTION RELIABILITY
+        // USING v1beta FOR BETTER COMPATIBILITY WITH STRUCTURED JSON MimeType
         const model = "gemini-1.5-flash";
-        const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
         const response = await fetch(url, {
             method: 'POST',
