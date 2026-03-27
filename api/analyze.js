@@ -1,4 +1,4 @@
-// This file acts as a secure bridge between your web and Google AI
+// VESTA DrawCheck Secure Bridge (Production v1.0)
 export default async function handler(req, res) {
     const apiKey = process.env.GEMINI_API_KEY;
     
@@ -13,9 +13,9 @@ export default async function handler(req, res) {
     }
 
     try {
-        // CORRECTION: Changed model to gemini-1.5-flash for public API compatibility
+        // USE THE STABLE V1 ENDPOINT FOR PRODUCTION RELIABILITY
         const model = "gemini-1.5-flash";
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`;
 
         const response = await fetch(url, {
             method: 'POST',
