@@ -245,12 +245,16 @@
             ${JSON.stringify(Object.keys(flatPriceMap))}
 
             CRITICAL DIMENSION & TAKEOFF RULES:
-            1. READ WRITTEN TEXT: Do NOT estimate visually. Find the overall dimension lines written on the drawing (e.g., 2780, 2610).
-            2. UNIT CONVERSION: Dimensions are usually in millimeters (mm). You MUST convert them to meters (m) by dividing by 1000. Example: 2780 written on plan = 2.78m.
-            3. QUANTITY LOGIC:
-               - Built-in Furniture ("m"): Use the OVERALL WIDTH in meters (e.g., 2.78). Do NOT count individual internal shelves or doors.
-               - Wall Finishes ("sqm"): Multiply OVERALL WIDTH x OVERALL HEIGHT in meters (e.g., 2.78 * 2.61 = 7.25 sqm).
-            4. DO NOT CALCULATE THE TOTAL PRICE OR HEALTH SCORE.
+            1. READ WRITTEN TEXT: Do NOT estimate visually. Find the overall dimension lines written on the drawing (e.g., 1600, 750).
+            2. UNIT CONVERSION: Dimensions are in millimeters (mm). Convert to meters (m) by dividing by 1000.
+            3. DRAFTING VIEWS (DE-DUPLICATION): The drawing contains multiple views (Plan, Elevation, Section) of the SAME object. Do NOT count them as separate items. Consolidate into ONE takeoff item per furniture tag (e.g., BF-08).
+            4. CLASSIFICATION THRESHOLDS:
+               - "Low-Cabinet (Base/TV Console)": Overall Height is UNDER 1200mm (1.2m).
+               - "High-Cabinet (Kitchen/Wardrobe)": Overall Height is 1200mm (1.2m) or GREATER.
+            5. QUANTITY LOGIC:
+               - Built-in Furniture ("m"): Use the OVERALL WIDTH in meters. Do NOT count internal shelves.
+               - Wall Finishes ("sqm"): Multiply OVERALL WIDTH x OVERALL HEIGHT in meters.
+            6. DO NOT CALCULATE THE TOTAL PRICE OR HEALTH SCORE.
 
             Return JSON ONLY:
             {
@@ -341,9 +345,20 @@
             const fList = document.getElementById('findings-list'); fList.innerHTML = "";
             (data.findings || []).forEach(f => {
                 const colors = { critical: 'border-red-500 bg-red-50/20', warning: 'border-amber-500 bg-amber-50/20', info: 'border-blue-500 bg-blue-50/20' };
+                const badgeColors = { critical: 'bg-red-100 text-red-700', warning: 'bg-amber-100 text-amber-700', info: 'bg-blue-100 text-blue-700' };
+                
+                const severityLower = (f.severity || 'info').toLowerCase();
                 const d = document.createElement('div');
-                d.className = `bg-white p-3 rounded-lg border-l-4 shadow-sm text-xs mb-1 ${colors[f.severity] || 'border-gray-200'}`;
-                d.innerHTML = `<div class="font-bold text-vesta-navy mb-1">${f.title}</div><p class="text-gray-500 font-light">${f.description}</p>`;
+                d.className = `bg-white p-3 rounded-lg border-l-4 shadow-sm text-xs mb-1 ${colors[severityLower] || 'border-gray-200'}`;
+                
+                // LOGIC FIX: Re-inserted the explicit severity text badge next to the title
+                d.innerHTML = `
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-[8px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded ${badgeColors[severityLower] || 'bg-gray-100 text-gray-500'}">${f.severity}</span>
+                        <div class="font-bold text-vesta-navy">${f.title}</div>
+                    </div>
+                    <p class="text-gray-500 font-light">${f.description}</p>
+                `;
                 fList.appendChild(d);
             });
             document.getElementById('total-budget').textContent = (data.totalBudget || 0).toLocaleString();
