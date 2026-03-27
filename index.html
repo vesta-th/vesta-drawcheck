@@ -245,20 +245,21 @@
             ${JSON.stringify(Object.keys(flatPriceMap))}
 
             CRITICAL DIMENSION & TAKEOFF RULES:
-            1. READ WRITTEN TEXT: Find the overall dimension lines written on the drawing.
-            2. UNIT CONVERSION: Dimensions are in millimeters (mm). Convert to meters (m) by dividing by 1000.
-            3. HYBRID TAKEOFF LOGIC (OFFICIAL vs ASSUMED):
+            1. READ WRITTEN TEXT: Find the overall dimension lines written on the drawing (e.g., 1920). Do not guess or default to 1m.
+            2. UNIT CONVERSION: Dimensions are in millimeters (mm). Convert to meters (m) by dividing by 1000 (e.g., 1920mm = 1.92m).
+            3. APPLY UNIFORM WIDTH: If a unit (like BF-10) has an overall width of 1.92m, apply this EXACT qty (1.92) to ALL its linear components (High-Cabinet, Low-Cabinet, etc.).
+            4. HYBRID TAKEOFF LOGIC (OFFICIAL vs ASSUMED):
                - First, try to match items to the REFERENCE CATEGORIES above.
                - IMPORTANT: If an item is clearly shown (e.g., Countertops, Backsplashes, Sinks, Stoves, Appliances) but NOT in the list, YOU MUST STILL EXTRACT IT. 
                - For these unlisted items, you must estimate a realistic 'market_rate' (Unit Price in THB) based on mid-to-premium Thai interior construction standards.
-            4. ITEM TAGGING (CROSS-PAGE DE-DUPLICATION):
+            5. ITEM TAGGING (CROSS-PAGE DE-DUPLICATION):
                - You MUST extract the architectural tag for the furniture/item (e.g., "BF-10", "C-01") and place it in 'item_tag'. 
-               - If the item has no tag, use "N/A". This is critical to prevent double-counting across pages.
-            5. RISK AUDIT LOGIC (STRICT SEVERITY):
-               - CRITICAL: Any text mentioning "รอระบุ" (To Be Advised/Specified), especially for appliances. Missing appliance specs block countertop fabrication and the critical path!
+               - If the item has no tag, use "N/A".
+            6. RISK AUDIT LOGIC (STRICT SEVERITY):
+               - CRITICAL: Any text mentioning "รอระบุ" (To Be Advised/Specified), especially for appliances.
                - WARNING: Any text mentioning "เช็คระยะหน้างาน" (Verify In Field / V.I.F.) or "หน้างาน" (On-site).
                - INFO: General notes or missing minor details.
-            6. DRAFTING VIEWS (DE-DUPLICATION): Consolidate multiple views (Plan, Elevation) into ONE takeoff item per furniture tag (e.g., BF-10) on this specific page.
+            7. DRAFTING VIEWS (DE-DUPLICATION): Consolidate multiple views (Plan, Elevation) into ONE takeoff item per category.
 
             Return JSON ONLY:
             {
@@ -268,8 +269,15 @@
             }`;
 
             try {
-                // LOGIC FIX: Re-routing back to the secure VESTA Vercel Proxy
-                const response = await fetch('/api/analyze', {
+                // LOGIC FIX: Check environment to conditionally route request
+                let fetchEndpoint = '/api/analyze';
+                
+                // If running in a local preview/Canvas where 'blob:' URL is used
+                if (window.location.protocol === 'blob:' || window.location.protocol === 'file:') {
+                    fetchEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                }
+
+                const response = await fetch(fetchEndpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -280,7 +288,8 @@
                 
                 if (!response.ok) {
                     const err = await response.json();
-                    throw new Error(`[Server Status ${response.status}]: ${err.error || 'Vercel Proxy Error'}`);
+                    const errMsg = err.error?.message || err.error || 'Server/Proxy Connection Failed';
+                    throw new Error(`[Status ${response.status}]: ${errMsg}`);
                 }
 
                 const data = await response.json();
@@ -398,15 +407,18 @@
                     const tag = (item.item_tag || 'N/A').toUpperCase().trim();
                     const isUntagged = tag === 'N/A' || tag === 'NONE' || tag === '';
                     
+                    // LOGIC FIX: Unique ID combines Tag AND Category (e.g., "BF-10::Low-Cabinet")
+                    const uniqueId = `${tag}::${item.category}`;
+                    
                     if (isUntagged) {
                         grandTotal += item.total;
                         uniquePageTotal += item.total;
-                    } else if (!seenTags.has(tag)) {
-                        seenTags.add(tag);
+                    } else if (!seenTags.has(uniqueId)) {
+                        seenTags.add(uniqueId);
                         grandTotal += item.total;
                         uniquePageTotal += item.total;
                     } else {
-                        deduplicatedCount++; // Skip adding to Batch Total if we already billed for this tag
+                        deduplicatedCount++; // Skip adding to Batch Total if we already billed for this specific component
                     }
                 });
 
@@ -451,13 +463,16 @@
                     const tag = (item.item_tag || 'N/A').toUpperCase().trim();
                     const isUntagged = tag === 'N/A' || tag === 'NONE' || tag === '';
                     let isDuplicate = false;
+                    
+                    // LOGIC FIX: Unique ID applies to export logic as well
+                    const uniqueId = `${tag}::${item.category}`;
 
                     // Deduplication logic for batch exports
                     if (isUntagged || !isBatch) {
                         grandTotal += item.total;
                         uniquePageTotal += item.total;
-                    } else if (!seenTags.has(tag)) {
-                        seenTags.add(tag);
+                    } else if (!seenTags.has(uniqueId)) {
+                        seenTags.add(uniqueId);
                         grandTotal += item.total;
                         uniquePageTotal += item.total;
                     } else {
