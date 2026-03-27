@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VESTA DrawCheck — Enterprise AI Inspector</title>
+    <title>VESTA DrawCheck — AI Drawing Inspector</title>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
@@ -21,115 +21,129 @@
         .page-thumb.active { border-color: var(--burg); transform: scale(1.05); z-index: 10; }
         .audited-dot { position: absolute; top: -4px; right: -4px; width: 10px; height: 10px; background: #10b981; border-radius: 50%; border: 2px solid white; display: none; }
         .page-thumb.has-audit .audited-dot { display: block; }
-        .assumed-badge { font-size: 7px; background-color: #fef2f2; color: var(--burg); padding: 2px 4px; border-radius: 4px; text-transform: uppercase; font-weight: bold; margin-left: 4px; border: 1px solid #fee2e2; }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
 
-    <header class="bg-vesta-navy h-20 flex items-center justify-between px-8 shrink-0 z-50 shadow-lg border-b border-white/5">
+    <header class="bg-vesta-navy h-20 flex items-center justify-between px-8 shrink-0 z-50 shadow-lg">
         <div class="flex items-center gap-6">
-            <img src="VESTA_LOGO._White.Ver2.ai.png" alt="VESTA Logo" class="h-10 w-auto object-contain" onerror="this.src='https://placehold.co/200x80/203e5d/white?text=VESTA';">
+            <img src="VESTA_LOGO._White.Ver2.ai.png" alt="VESTA Logo" class="h-10 w-auto object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+            <div style="display:none;">
+                <h1 class="text-white font-semibold text-lg tracking-[0.2em] uppercase">VESTA <span class="font-light opacity-50">|</span> DRAWCHECK</h1>
+            </div>
             <div class="h-8 w-[1px] bg-white/20 ml-2 hidden sm:block"></div>
             <div class="hidden lg:block">
-                <h2 class="text-white/80 font-medium text-xs tracking-[0.15em] uppercase">DrawCheck Production Suite</h2>
-                <p class="text-[9px] text-white/40 tracking-widest uppercase font-light italic">Precision Build v3.4</p>
+                <h2 class="text-white/80 font-medium text-xs tracking-[0.15em] uppercase">DrawCheck Engine</h2>
+                <p class="text-[9px] text-white/40 tracking-widest uppercase font-light">AI Architectural Audit & Takeoff v2.2 (Precision Logic)</p>
             </div>
         </div>
-        <div id="file-meta" class="hidden text-white/60 text-[10px] uppercase tracking-widest bg-black/20 px-5 py-2.5 rounded-full border border-white/10">
-            Set: <span id="doc-name" class="text-white font-bold">--</span> | <span id="page-count">0</span> Pages
+        <div id="file-meta" class="hidden text-white/60 text-[10px] uppercase tracking-widest bg-black/20 px-4 py-2 rounded-full border border-white/5">
+            Doc: <span id="doc-name" class="text-white font-bold">--</span> | <span id="page-count">0</span> Pages
         </div>
     </header>
 
     <main class="flex-1 flex overflow-hidden">
         <div class="flex-1 flex flex-col border-r border-gray-200 bg-white overflow-hidden">
             <div id="page-nav" class="hidden h-24 border-b border-gray-100 bg-gray-50 flex items-center gap-4 px-6 overflow-x-auto shrink-0"></div>
-            
-            <div id="drop-zone" class="flex-1 m-8 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center p-12 transition-all hover:border-navy cursor-pointer">
-                <div class="w-16 h-16 bg-vesta-navy rounded-xl flex items-center justify-center shadow-lg mb-6 text-white text-3xl font-bold">↑</div>
-                <h3 class="serif text-2xl font-semibold text-vesta-navy mb-2 text-center">Upload Project File</h3>
-                <p class="text-center text-sm text-gray-500 max-w-sm mb-6 font-light">Precision Audit with Hybrid Price Analysis</p>
-                <button onclick="document.getElementById('file-input').click()" class="bg-vesta-navy text-white px-8 py-3 rounded-lg text-sm font-bold uppercase tracking-widest">Browse Set</button>
+
+            <div id="drop-zone" class="flex-1 m-6 border-2 border-dashed border-gray-200 rounded-xl flex flex-col items-center justify-center p-12 transition-colors hover:border-vesta-navy cursor-pointer">
+                <div class="w-16 h-16 bg-vesta-navy rounded-xl flex items-center justify-center shadow-lg mb-6 text-white">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                </div>
+                <h3 class="serif text-2xl font-semibold text-vesta-navy mb-2">Upload Drawing Set (PDF)</h3>
+                <p class="text-center text-sm text-gray-500 max-w-sm mb-6 font-light">Audit plans with anchored precision logic and deterministic budget calculation.</p>
+                <button onclick="document.getElementById('file-input').click()" class="bg-vesta-navy text-white px-8 py-3 rounded-lg text-sm font-medium hover:bg-slate-700">Select Project File</button>
                 <input type="file" id="file-input" class="hidden" accept=".pdf,image/*" onchange="handleFile(event)">
             </div>
 
-            <div id="canvas-area" class="hidden flex-1 relative bg-gray-100 flex items-center justify-center p-10 overflow-auto">
+            <div id="canvas-area" class="hidden flex-1 relative bg-gray-100 flex items-center justify-center p-8 overflow-auto">
                 <canvas id="pdf-render-canvas" class="shadow-2xl bg-white"></canvas>
-                <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-4">
-                    <button id="audit-btn" onclick="runAudit()" class="bg-vesta-burg text-white px-10 py-4 rounded-full shadow-2xl text-sm font-bold tracking-wider uppercase flex items-center gap-2">
-                        Execute Analysis
-                    </button>
-                    <button onclick="location.reload()" class="bg-white text-gray-500 px-8 py-4 rounded-full border border-gray-200 text-sm font-bold uppercase shadow-md">Cancel</button>
+                <div class="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3">
+                    <button id="audit-btn" onclick="runAudit()" class="bg-vesta-burg text-white px-8 py-3 rounded-full shadow-xl flex items-center gap-2 text-sm font-medium hover:scale-105 transition-transform">Inspect & Price</button>
+                    <button onclick="location.reload()" class="bg-white text-gray-400 px-6 py-3 rounded-full border border-gray-200 text-sm shadow-md">Cancel</button>
                 </div>
             </div>
         </div>
 
-        <div class="w-[440px] flex flex-col bg-slate-50 shadow-inner overflow-hidden">
+        <div class="w-[420px] flex flex-col bg-slate-50 shadow-inner overflow-hidden">
             <div class="flex bg-white border-b border-gray-200 shrink-0">
-                <button id="tab-findings" onclick="switchTab('findings')" class="flex-1 py-5 text-[10px] font-bold tracking-widest uppercase tab-active">Audit</button>
-                <button id="tab-budget" onclick="switchTab('budget')" class="flex-1 py-5 text-[10px] font-bold tracking-widest uppercase text-gray-400">Takeoff</button>
-                <button id="tab-batch" onclick="switchTab('batch')" class="flex-1 py-5 text-[10px] font-bold tracking-widest uppercase text-gray-400 flex items-center justify-center gap-1">
-                    Batch <span id="batch-badge" class="bg-vesta-navy text-white px-2 py-0.5 rounded-full text-[8px]">0</span>
+                <button id="tab-findings" onclick="switchTab('findings')" class="flex-1 py-4 text-[9px] font-bold tracking-widest uppercase tab-active transition-all">Audit</button>
+                <button id="tab-budget" onclick="switchTab('budget')" class="flex-1 py-4 text-[9px] font-bold tracking-widest uppercase text-gray-400 hover:text-vesta-navy transition-all">Takeoff</button>
+                <button id="tab-batch" onclick="switchTab('batch')" class="flex-1 py-4 text-[9px] font-bold tracking-widest uppercase text-gray-400 hover:text-vesta-navy transition-all flex items-center justify-center gap-1">
+                    Batch <span id="batch-badge" class="bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full text-[8px]">0</span>
                 </button>
             </div>
 
-            <div id="loading-report" class="hidden flex-1 flex flex-col items-center justify-center p-12 text-center">
-                <div class="w-12 h-12 border-4 border-t-vesta-burg rounded-full animate-spin mb-4"></div>
-                <p class="serif text-lg italic text-vesta-navy">Precision Takeoff in Progress...</p>
-                <p class="text-[9px] text-gray-400 uppercase tracking-widest mt-2 font-bold">Verifying against Price Master</p>
+            <div id="empty-report" class="flex-1 flex flex-col items-center justify-center p-12 text-center">
+                <p class="text-sm text-gray-400 font-light italic">Audit floor plans to see consistent price extraction.</p>
             </div>
 
-            <div id="empty-report" class="flex-1 flex flex-col items-center justify-center p-12 text-center opacity-40">
-                <p class="text-sm font-light italic">Awaiting document analysis.</p>
+            <div id="loading-report" class="hidden flex-1 flex flex-col items-center justify-center p-12">
+                <div class="w-10 h-10 border-4 border-gray-200 border-t-vesta-burg rounded-full animate-spin mb-4"></div>
+                <p class="serif text-lg text-vesta-navy italic font-medium text-center">Calibrating Scale & Takeoff...</p>
+                <p class="text-[9px] text-gray-400 uppercase tracking-widest mt-2">Source: Price Master v2026.1</p>
             </div>
 
             <div id="report-container" class="hidden flex flex-col flex-1 overflow-hidden">
-                <div id="findings-content" class="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
-                    <div class="bg-white p-6 rounded-2xl border mb-2 shadow-sm">
-                        <span class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Validated Readiness</span>
-                        <div class="serif text-5xl font-bold text-vesta-navy" id="health-score">--</div>
-                        <div class="w-full h-1.5 bg-gray-100 rounded-full mt-3 overflow-hidden">
-                            <div id="health-bar" class="h-full bg-vesta-navy transition-all duration-1000" style="width: 0%"></div>
+                <div id="findings-content" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+                    <div id="health-card" class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
+                        <div class="flex justify-between items-end mb-2">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Validated Health Score</span>
+                            <span id="health-score" class="serif text-4xl font-bold text-vesta-navy">--</span>
                         </div>
-                        <p id="verdict-text" class="text-[11px] text-gray-500 mt-4 italic"></p>
+                        <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div id="health-bar" class="h-full bg-vesta-navy transition-all duration-700" style="width: 0%"></div>
+                        </div>
+                        <p id="verdict-text" class="text-[11px] text-gray-500 mt-3 italic"></p>
                     </div>
-                    <div id="findings-list" class="space-y-3"></div>
+                    <div id="findings-list" class="flex flex-col gap-3 pb-4"></div>
                 </div>
 
-                <div id="budget-content" class="hidden flex-1 overflow-y-auto p-5 flex flex-col gap-5">
-                    <div class="bg-vesta-navy p-6 rounded-2xl text-white shadow-xl">
-                        <div class="text-[10px] font-bold uppercase opacity-50">Calculated Page Total</div>
-                        <div class="serif text-4xl font-bold">฿<span id="total-budget">0</span></div>
+                <div id="budget-content" class="hidden flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+                    <div class="bg-vesta-navy p-5 rounded-xl text-white shadow-lg shrink-0">
+                        <span class="text-[10px] font-bold uppercase tracking-widest opacity-60">Calculated Takeoff Total</span>
+                        <div class="flex items-baseline gap-2 mt-1">
+                            <span class="text-xs font-light opacity-80">฿</span>
+                            <span id="total-budget" class="serif text-4xl font-bold tracking-tight">0</span>
+                        </div>
                     </div>
-                    <div class="bg-white rounded-xl border overflow-hidden">
+                    <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
                         <table class="w-full text-left text-[11px]">
-                            <thead class="bg-gray-50 text-[9px] uppercase font-bold text-gray-400">
-                                <tr><th class="px-4 py-3">Item Name</th><th class="px-4 py-3 text-right">Qty</th><th class="px-4 py-3 text-right">Subtotal</th></tr>
+                            <thead class="bg-gray-50 border-b border-gray-100 text-[9px] uppercase font-bold text-gray-400">
+                                <tr>
+                                    <th class="px-4 py-3">Category</th>
+                                    <th class="px-4 py-3 text-right">Qty</th>
+                                    <th class="px-4 py-3 text-right">Total (฿)</th>
+                                </tr>
                             </thead>
-                            <tbody id="budget-table-body" class="divide-y divide-gray-50"></tbody>
+                            <tbody id="budget-table-body" class="text-gray-600"></tbody>
                         </table>
                     </div>
                 </div>
 
-                <div id="batch-content" class="hidden flex-1 overflow-y-auto p-5 flex flex-col gap-5">
-                    <div class="bg-vesta-burg p-6 rounded-2xl text-white shadow-xl">
-                        <div class="text-[10px] font-bold uppercase opacity-50">Grand Project Total</div>
-                        <div class="serif text-4xl font-bold">฿<span id="batch-total-budget">0</span></div>
+                <div id="batch-content" class="hidden flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+                    <div class="bg-vesta-burg p-5 rounded-xl text-white shadow-lg shrink-0">
+                        <span class="text-[10px] font-bold uppercase tracking-widest opacity-60">Consolidated Project Total</span>
+                        <div class="flex items-baseline gap-2 mt-1">
+                            <span class="text-xs font-light opacity-80">฿</span>
+                            <span id="batch-total-budget" class="serif text-4xl font-bold tracking-tight">0</span>
+                        </div>
                     </div>
-                    <div id="batch-summary-list" class="space-y-3 pt-4"></div>
+                    <div id="batch-summary-list" class="flex flex-col gap-4 pb-4"></div>
                 </div>
 
-                <div class="p-5 border-t bg-white flex gap-3">
-                    <button onclick="exportSummary()" class="flex-1 border py-3 rounded-xl text-[10px] font-bold uppercase hover:bg-gray-50 transition-colors">Export Page</button>
-                    <button id="batch-export-btn" disabled onclick="exportBatchSummary()" class="flex-1 bg-vesta-navy text-white py-3 rounded-xl text-[10px] font-bold uppercase">Export Batch</button>
+                <div class="p-4 border-t border-gray-200 bg-white shrink-0 flex gap-2">
+                    <button onclick="exportSummary()" class="flex-1 bg-white border border-vesta-navy text-vesta-navy py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-gray-50 transition-colors">Export Page</button>
+                    <button id="batch-export-btn" disabled onclick="exportBatchSummary()" class="flex-1 bg-vesta-navy text-white py-3 rounded-lg text-[10px] font-bold uppercase tracking-widest hover:bg-slate-700 transition-colors disabled:opacity-30">Export Batch</button>
                 </div>
             </div>
         </div>
     </main>
 
     <script>
-        let pdfDoc = null, pageNum = 1, currentImageBase64 = null, sessionAudits = {}; 
-        
-        // INTEGRATED UPDATED PRICE MASTER
+        const apiKey = ""; 
+        let pdfDoc = null, pageNum = 1, currentImageBase64 = null, renderTask = null, sessionAudits = {}; 
+
         const priceMaster = {
             "categories": {
                 "Built-in Furniture": {
@@ -143,32 +157,46 @@
                     "Marble Cladding": { "rate": 12000, "unit": "sqm" },
                     "Painting (Internal)": { "rate": 250, "unit": "sqm" }
                 },
-                "Flooring": {
-                    "SPC Flooring": { "rate": 1000, "unit": "sqm" },
-                    "Engineered Wood": { "rate": 3500, "unit": "sqm" }
-                },
-                "MEP & Lighting": {
-                    "Lighting Point": { "rate": 1800, "unit": "point" },
-                    "Power Outlet": { "rate": 1500, "unit": "point" }
-                }
+                "Flooring": { "SPC Flooring": { "rate": 1000, "unit": "sqm" }, "Engineered Wood": { "rate": 3500, "unit": "sqm" } },
+                "MEP & Lighting": { "Lighting Point": { "rate": 1800, "unit": "point" }, "Power Outlet": { "rate": 1500, "unit": "point" } }
             }
         };
 
+        // Flat lookup for Javascript logic
         const flatPriceMap = {};
-        Object.values(priceMaster.categories).forEach(cat => Object.keys(cat).forEach(item => flatPriceMap[item] = cat[item]));
+        Object.values(priceMaster.categories).forEach(cat => {
+            Object.keys(cat).forEach(item => { flatPriceMap[item] = cat[item]; });
+        });
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
         async function handleFile(e) {
-            const file = e.target.files[0]; if (!file) return;
-            sessionAudits = {}; document.getElementById('drop-zone').classList.add('hidden');
+            const file = e.target.files[0];
+            if (!file) return;
+            sessionAudits = {}; 
+            document.getElementById('drop-zone').classList.add('hidden');
+            document.getElementById('loading-report').classList.remove('hidden');
             document.getElementById('doc-name').textContent = file.name;
             if (file.type === "application/pdf") {
-                const ab = await file.arrayBuffer(); pdfDoc = await pdfjsLib.getDocument(ab).promise;
+                const ab = await file.arrayBuffer();
+                pdfDoc = await pdfjsLib.getDocument(ab).promise;
                 document.getElementById('file-meta').classList.remove('hidden');
                 document.getElementById('page-count').textContent = pdfDoc.numPages;
                 document.getElementById('page-nav').classList.remove('hidden');
                 renderThumbnails(); renderPage(1);
+            } else {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    currentImageBase64 = ev.target.result.split(',')[1];
+                    document.getElementById('canvas-area').classList.remove('hidden');
+                    document.getElementById('loading-report').classList.add('hidden');
+                    const canvas = document.getElementById('pdf-render-canvas');
+                    const ctx = canvas.getContext('2d');
+                    const img = new Image();
+                    img.onload = () => { canvas.width = img.width; canvas.height = img.height; ctx.drawImage(img, 0, 0); };
+                    img.src = ev.target.result;
+                };
+                reader.readAsDataURL(file);
             }
         }
 
@@ -176,47 +204,63 @@
             const nav = document.getElementById('page-nav'); nav.innerHTML = "";
             for (let i = 1; i <= Math.min(pdfDoc.numPages, 100); i++) {
                 const btn = document.createElement('div');
-                btn.className = `page-thumb h-16 w-12 border shadow-sm flex items-center justify-center text-[10px] font-bold rounded ${i===pageNum?'active':''}`;
-                btn.id = `thumb-${i}`; btn.innerHTML = `P${i}`;
-                btn.onclick = () => renderPage(i); nav.appendChild(btn);
+                btn.className = `page-thumb h-16 w-12 border-2 border-transparent flex-shrink-0 shadow-sm flex flex-col items-center justify-center text-[10px] font-bold text-gray-400 rounded-md ${sessionAudits[i] ? 'has-audit' : ''} ${i === pageNum ? 'active' : ''}`;
+                btn.id = `thumb-${i}`;
+                btn.innerHTML = `<div class="audited-dot"></div><span>Page</span><span>${i}</span>`;
+                btn.onclick = () => { document.querySelectorAll('.page-thumb').forEach(t => t.classList.remove('active')); btn.classList.add('active'); renderPage(i); };
+                nav.appendChild(btn);
             }
         }
 
         async function renderPage(num) {
-            pageNum = num; const page = await pdfDoc.getPage(num);
-            const vp = page.getViewport({ scale: 2.0 }); const cv = document.getElementById('pdf-render-canvas');
-            cv.height = vp.height; cv.width = vp.width;
-            await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
-            currentImageBase64 = cv.toDataURL('image/jpeg', 0.8).split(',')[1];
-            document.getElementById('canvas-area').classList.remove('hidden');
-            document.querySelectorAll('.page-thumb').forEach(t => t.classList.remove('active'));
-            const activeThumb = document.getElementById(`thumb-${num}`);
-            if (activeThumb) activeThumb.classList.add('active');
-            if (sessionAudits[pageNum]) renderReport(sessionAudits[pageNum]);
-            else { document.getElementById('empty-report').classList.remove('hidden'); document.getElementById('report-container').classList.add('hidden'); }
+            if (renderTask) { renderTask.cancel(); }
+            pageNum = num;
+            try {
+                const page = await pdfDoc.getPage(num);
+                const vp = page.getViewport({ scale: 2.0 });
+                const cv = document.getElementById('pdf-render-canvas');
+                const ctx = cv.getContext('2d');
+                cv.height = vp.height; cv.width = vp.width;
+                renderTask = page.render({ canvasContext: ctx, viewport: vp });
+                await renderTask.promise; renderTask = null;
+                currentImageBase64 = cv.toDataURL('image/jpeg', 0.8).split(',')[1];
+                document.getElementById('canvas-area').classList.remove('hidden');
+                document.getElementById('loading-report').classList.add('hidden');
+                if (sessionAudits[pageNum]) renderReport(sessionAudits[pageNum]);
+                else { document.getElementById('empty-report').classList.remove('hidden'); document.getElementById('report-container').classList.add('hidden'); }
+            } catch (error) { if (error.name !== 'RenderingCancelledException') console.error('Render error:', error); }
         }
 
         async function runAudit() {
             if (!currentImageBase64) return;
-            const auditBtn = document.getElementById('audit-btn');
-            auditBtn.disabled = true;
+            const btn = document.getElementById('audit-btn');
+            btn.disabled = true;
             document.getElementById('loading-report').classList.remove('hidden');
             document.getElementById('empty-report').classList.add('hidden');
             document.getElementById('report-container').classList.add('hidden');
 
-            const prompt = `You are the VESTA Senior Project Architect. 
-            STEP 1: Scale Calibration. Find a dimension line or a standard door (0.9m) to calibrate your measurement logic.
-            STEP 2: Extraction. Extract takeoff quantities for these EXACT categories only: ${JSON.stringify(Object.keys(flatPriceMap))}.
-            STEP 3: Risk Audit. Identify "รอระบุ" (Critical), "หน้างาน" (Warning).
+            const prompt = `You are the VESTA Senior Project Architect. Analyze this drawing with 100% precision logic.
             
-            Return JSON ONLY: { 
-                "verdict": "string summary", 
-                "findings": [{ "severity": "critical|warning|info", "title": "string", "description": "string" }], 
-                "takeoff": [{ "category": "MATCH_EXACT_CATEGORY_NAME", "qty": number }] 
+            REFERENCE CATEGORIES (MANDATORY KEYS):
+            ${JSON.stringify(Object.keys(flatPriceMap))}
+
+            CRITICAL DIMENSION & TAKEOFF RULES:
+            1. READ WRITTEN TEXT: Do NOT estimate visually. Find the overall dimension lines written on the drawing (e.g., 2780, 2610).
+            2. UNIT CONVERSION: Dimensions are usually in millimeters (mm). You MUST convert them to meters (m) by dividing by 1000. Example: 2780 written on plan = 2.78m.
+            3. QUANTITY LOGIC:
+               - Built-in Furniture ("m"): Use the OVERALL WIDTH in meters (e.g., 2.78). Do NOT count individual internal shelves or doors.
+               - Wall Finishes ("sqm"): Multiply OVERALL WIDTH x OVERALL HEIGHT in meters (e.g., 2.78 * 2.61 = 7.25 sqm).
+            4. DO NOT CALCULATE THE TOTAL PRICE OR HEALTH SCORE.
+
+            Return JSON ONLY:
+            {
+                "verdict": "string summary",
+                "findings": [{ "severity": "critical|warning|info", "title": "string", "description": "string" }],
+                "takeoffItems": [{ "category": "Exact Category Name", "qty": 0.00, "unit": "m|sqm|point" }]
             }`;
 
             try {
-                const response = await fetch('/api/analyze', {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -224,49 +268,41 @@
                         generationConfig: { temperature: 0, responseMimeType: "application/json" }
                     })
                 });
-
-                if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(`[Status ${response.status}]: ${err.error || 'Connection Failed'}`);
-                }
-
                 const data = await response.json();
-                const aiResult = JSON.parse(data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim());
+                const aiResult = JSON.parse(data.candidates[0].content.parts[0].text);
                 
-                // JAVASCRIPT PRECISION CALCULATOR
+                // --- DETERMINISTIC POST-PROCESSING IN JAVASCRIPT ---
+                
+                // 1. Calculate Score (Deductive Rubric)
                 let score = 100;
-                (aiResult.findings || []).forEach(f => {
-                    const s = f.severity?.toLowerCase();
+                aiResult.findings.forEach(f => {
+                    const s = f.severity.toLowerCase();
                     if (s === 'critical') score -= 15;
                     else if (s === 'warning') score -= 5;
                     else if (s === 'info') score -= 2;
                 });
                 aiResult.healthScore = Math.max(0, score);
 
-                let total = 0;
-                aiResult.budgetItems = (aiResult.takeoff || []).map(item => {
+                // 2. Calculate Budget (Reference Map logic)
+                let totalBudget = 0;
+                const budgetItems = aiResult.takeoffItems.map(item => {
                     const ref = flatPriceMap[item.category];
-                    // Logic Restored: Price Source identification
-                    const isOfficial = !!ref;
-                    const rate = isOfficial ? ref.rate : 1500; 
-                    const itemTotal = item.qty * rate;
-                    total += itemTotal;
-                    return { 
-                        ...item, 
-                        total: itemTotal, 
-                        priceSource: isOfficial ? 'Official' : 'Market Research',
-                        unit: isOfficial ? ref.unit : 'unit'
-                    };
+                    const rate = ref ? ref.rate : 0; // Market research fallback could be added here
+                    const priceSource = ref ? 'Official' : 'Market Research';
+                    const finalRate = ref ? rate : 1500; // Market default if missing
+                    const total = item.qty * finalRate;
+                    totalBudget += total;
+                    return { ...item, total, priceSource };
                 });
-                aiResult.totalBudget = total;
+                aiResult.budgetItems = budgetItems;
+                aiResult.totalBudget = totalBudget;
 
                 sessionAudits[pageNum] = aiResult;
-                document.getElementById(`thumb-${pageNum}`).classList.add('has-audit');
+                const thumb = document.getElementById(`thumb-${pageNum}`);
+                if (thumb) thumb.classList.add('has-audit');
                 updateBatchStats();
                 renderReport(aiResult);
-
-            } catch (err) { alert(`AUDIT ERROR:\n${err.message}`); }
-            finally { auditBtn.disabled = false; document.getElementById('loading-report').classList.add('hidden'); }
+            } catch (err) { alert("Audit Logic Failure. Check console."); } finally { btn.disabled = false; document.getElementById('loading-report').classList.add('hidden'); }
         }
 
         function updateBatchStats() {
@@ -277,42 +313,41 @@
 
         function renderReport(data) {
             document.getElementById('report-container').classList.remove('hidden');
-            document.getElementById('health-score').textContent = data.healthScore + '%';
+            document.getElementById('health-score').textContent = data.healthScore;
             document.getElementById('health-bar').style.width = data.healthScore + '%';
             document.getElementById('verdict-text').textContent = data.verdict || "";
-            
             const fList = document.getElementById('findings-list'); fList.innerHTML = "";
             (data.findings || []).forEach(f => {
-                const d = document.createElement('div'); 
-                d.className = "bg-white p-4 rounded-xl border-l-4 border-burg shadow-sm text-xs";
-                d.innerHTML = `<div class="font-bold text-vesta-navy mb-1 uppercase tracking-widest">${f.title}</div><p class="text-gray-500 font-light">${f.description}</p>`;
+                const colors = { critical: 'border-red-500 bg-red-50/20', warning: 'border-amber-500 bg-amber-50/20', info: 'border-blue-500 bg-blue-50/20' };
+                const d = document.createElement('div');
+                d.className = `bg-white p-3 rounded-lg border-l-4 shadow-sm text-xs mb-1 ${colors[f.severity] || 'border-gray-200'}`;
+                d.innerHTML = `<div class="font-bold text-vesta-navy mb-1">${f.title}</div><p class="text-gray-500 font-light">${f.description}</p>`;
                 fList.appendChild(d);
             });
-
             document.getElementById('total-budget').textContent = (data.totalBudget || 0).toLocaleString();
             const bTable = document.getElementById('budget-table-body'); bTable.innerHTML = "";
-            
             (data.budgetItems || []).forEach(item => {
-                const row = document.createElement('tr');
                 const isAssumed = item.priceSource === 'Market Research';
-                
-                // RESTORED: "Assumed" Badge Logic
-                const badgeHtml = isAssumed ? `<span class="assumed-badge">Assumed</span>` : '';
-                
-                row.innerHTML = `
-                    <td class="px-4 py-3 font-medium">
-                        ${item.category}${badgeHtml}
-                    </td>
-                    <td class="px-4 py-3 text-right">
-                        ${item.qty} ${item.unit}
-                    </td>
-                    <td class="px-4 py-3 text-right font-bold text-vesta-navy">
-                        ฿${(item.total || 0).toLocaleString()}
-                    </td>
-                `;
+                const sourceBadge = isAssumed ? '<span class="text-[7px] bg-burg-pale text-burg px-1 rounded ml-1 uppercase">Assumed</span>' : '';
+                const row = document.createElement('tr'); row.className = "border-b border-gray-50";
+                row.innerHTML = `<td class="px-4 py-3 font-medium ${isAssumed ? 'italic' : ''}">${item.category}${sourceBadge}</td><td class="px-4 py-3 text-right">${item.qty} ${item.unit}</td><td class="px-4 py-3 text-right font-bold text-vesta-navy">${item.total.toLocaleString()}</td>`;
                 bTable.appendChild(row);
             });
             switchTab('findings');
+        }
+
+        function renderBatchSummary() {
+            const list = document.getElementById('batch-summary-list'); list.innerHTML = "";
+            let grandTotal = 0;
+            Object.entries(sessionAudits).forEach(([num, data]) => {
+                grandTotal += (data.totalBudget || 0);
+                const pageItem = document.createElement('div');
+                pageItem.className = "bg-white p-4 rounded-xl border border-gray-100 shadow-sm";
+                const sevCounts = data.findings.reduce((acc, f) => { acc[f.severity]++; return acc; }, { critical: 0, warning: 0, info: 0 });
+                pageItem.innerHTML = `<div class="flex justify-between items-center mb-2"><span class="text-[10px] font-bold uppercase text-vesta-navy">Page ${num}</span><span class="text-[11px] font-bold">฿${(data.totalBudget || 0).toLocaleString()}</span></div><div class="flex gap-2"><span class="text-[8px] px-1.5 py-0.5 rounded bg-red-50 text-red-600 font-bold">${sevCounts.critical} CRIT</span><span class="text-[8px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 font-bold">${sevCounts.warning} WARN</span></div>`;
+                list.appendChild(pageItem);
+            });
+            document.getElementById('batch-total-budget').textContent = grandTotal.toLocaleString();
         }
 
         function switchTab(tab) {
@@ -326,42 +361,30 @@
             if (tab === 'batch') renderBatchSummary();
         }
 
-        function renderBatchSummary() {
-            const list = document.getElementById('batch-summary-list'); list.innerHTML = "";
-            let grandTotal = 0;
-            Object.entries(sessionAudits).forEach(([num, data]) => {
-                grandTotal += (data.totalBudget || 0);
-                const item = document.createElement('div');
-                item.className = "bg-white p-4 rounded-xl shadow-sm border flex justify-between items-center";
-                item.innerHTML = `<div><div class="text-[10px] font-bold text-vesta-navy uppercase">Page ${num}</div><div class="text-[8px] text-gray-400 tracking-widest">${data.findings?.length || 0} Findings</div></div><div class="text-xs font-bold text-vesta-navy">฿${(data.totalBudget || 0).toLocaleString()}</div>`;
-                list.appendChild(item);
-            });
-            document.getElementById('batch-total-budget').textContent = grandTotal.toLocaleString();
-        }
-
-        function exportSummary() { const d = sessionAudits[pageNum]; if (d) generateTxtReport(`VESTA-Page${pageNum}`, [d], [pageNum]); }
-        function exportBatchSummary() { const p = Object.keys(sessionAudits).sort((a,b)=>a-b); generateTxtReport(`VESTA-FullProject`, p.map(x=>sessionAudits[x]), p); }
+        function exportSummary() { const data = sessionAudits[pageNum]; if (data) generateTxtReport(`VESTA-Audit-Page${pageNum}`, [data], [pageNum]); }
+        function exportBatchSummary() { const pages = Object.keys(sessionAudits).sort((a,b) => a-b); generateTxtReport(`VESTA-Batch-Summary`, pages.map(p => sessionAudits[p]), pages); }
 
         function generateTxtReport(prefix, dataList, pageNums) {
             const docName = document.getElementById('doc-name').textContent;
-            let content = `VESTA DRAWCHECK ENTERPRISE REPORT - ${new Date().toLocaleString()}\nDocument: ${docName}\n\n`;
+            let content = `VESTA DRAWCHECK SUMMARY - ${new Date().toLocaleString()}\nDocument: ${docName}\n==================================================\n\n`;
             let grandTotal = 0;
             dataList.forEach((data, i) => {
                 grandTotal += (data.totalBudget || 0);
-                content += `PAGE ${pageNums[i]} | READINESS: ${data.healthScore}/100 | VALUE: ฿${(data.totalBudget || 0).toLocaleString()}\n`;
-                content += `Verdict: ${data.verdict}\nFindings:\n`;
-                (data.findings || []).forEach(f => content += `- [${f.severity?.toUpperCase()}] ${f.title}: ${f.description}\n`);
-                content += `\nDetailed Takeoff:\n`;
-                (data.budgetItems || []).forEach(item => {
-                    const srcStr = item.priceSource === 'Market Research' ? '[ASSUMED]' : '[OFFICIAL]';
-                    content += `- ${item.category} ${srcStr}: ${item.qty} ${item.unit} | ฿${(item.total || 0).toLocaleString()}\n`;
+                content += `PAGE ${pageNums[i]} REPORT | Score: ${data.healthScore}/100 | Total: ฿${(data.totalBudget || 0).toLocaleString()}\n`;
+                content += `Verdict: ${data.verdict}\n\nFindings:\n`;
+                data.findings.forEach(f => content += ` - [${f.severity.toUpperCase()}] ${f.title}: ${f.description}\n`);
+                content += `\nBudget Items:\n`;
+                data.budgetItems.forEach(item => {
+                    const src = item.priceSource === 'Market Research' ? '[ASSUMED]' : '[OFFICIAL]';
+                    content += ` - ${item.category.padEnd(25)} | ${item.qty} ${item.unit.padEnd(5)} | ฿${item.total.toLocaleString().padEnd(10)} | ${src}\n`;
                 });
                 content += `\n\n`;
             });
-            if (dataList.length > 1) content += `CONSOLIDATED PROJECT TOTAL: ฿${grandTotal.toLocaleString()}\n\n`;
-            content += `DEDUCTION LOGIC:\nCritical: -15pts (Procurement blocks)\nWarning: -5pts (Field coordination)\nInfo: -2pts (Notes)`;
+            if (dataList.length > 1) content += `==================================================\nGRAND BATCH TOTAL: ฿${grandTotal.toLocaleString()}\n==================================================\n\n`;
+            content += `RISK CATEGORY LEGEND & DEDUCTION LOGIC\n--------------------------------------------------\nCRITICAL (-15 pts): Procurement blocks (e.g. "รอระบุ"), \n                    structural clashes, or safety violations.\nWARNING  (-5 pts) : Field coordination (e.g. "หน้างาน" / V.I.F.),\n                    material substitutions, or ergonomic risks.\nINFO     (-2 pts) : General notations or drafting best practices.\n\nNOTE: Final readiness score is clamped at a minimum of 0.\n`;
             const blob = new Blob([content], { type: 'text/plain' });
-            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${prefix}.txt`; a.click();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href = url; a.download = `${prefix}.txt`; a.click();
         }
     </script>
 </body>
