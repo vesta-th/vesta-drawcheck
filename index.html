@@ -31,7 +31,7 @@
             <div class="h-8 w-[1px] bg-white/20 ml-2 hidden sm:block"></div>
             <div class="hidden lg:block">
                 <h2 class="text-white/80 font-medium text-xs tracking-[0.15em] uppercase">DrawCheck Production Suite</h2>
-                <p class="text-[9px] text-white/40 tracking-widest uppercase font-light italic">Production Build v3.1</p>
+                <p class="text-[9px] text-white/40 tracking-widest uppercase font-light italic">Production Build v3.2</p>
             </div>
         </div>
         <div id="file-meta" class="hidden text-white/60 text-[10px] uppercase tracking-widest bg-black/20 px-5 py-2.5 rounded-full border border-white/10">
@@ -46,7 +46,7 @@
             <div id="drop-zone" class="flex-1 m-8 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center p-12 transition-all hover:border-navy cursor-pointer">
                 <div class="w-16 h-16 bg-vesta-navy rounded-xl flex items-center justify-center shadow-lg mb-6 text-white text-3xl font-bold">↑</div>
                 <h3 class="serif text-2xl font-semibold text-vesta-navy mb-2 text-center">Upload Project File</h3>
-                <p class="text-center text-sm text-gray-500 max-w-sm mb-6 font-light">Audit drawing sets for VESTA Project Management</p>
+                <p class="text-center text-sm text-gray-500 max-w-sm mb-6 font-light">Precision Audit for VESTA Project Management</p>
                 <button onclick="document.getElementById('file-input').click()" class="bg-vesta-navy text-white px-8 py-3 rounded-lg text-sm font-bold uppercase tracking-widest">Browse Set</button>
                 <input type="file" id="file-input" class="hidden" accept=".pdf,image/*" onchange="handleFile(event)">
             </div>
@@ -73,12 +73,12 @@
 
             <div id="loading-report" class="hidden flex-1 flex flex-col items-center justify-center p-12 text-center">
                 <div class="w-12 h-12 border-4 border-t-vesta-burg rounded-full animate-spin mb-4"></div>
-                <p class="serif text-lg italic text-vesta-navy">Analyzing with Precision Logic...</p>
-                <p class="text-[9px] text-gray-400 uppercase tracking-widest mt-2 font-bold">Stable v1beta Handshake</p>
+                <p class="serif text-lg italic text-vesta-navy">Initializing Gemini 3.1 Pro...</p>
+                <p class="text-[9px] text-gray-400 uppercase tracking-widest mt-2 font-bold">Multimodal Reasoning Active</p>
             </div>
 
             <div id="empty-report" class="flex-1 flex flex-col items-center justify-center p-12 text-center opacity-40">
-                <p class="text-sm font-light italic">Ready for analysis.</p>
+                <p class="text-sm font-light italic">Select page to initiate audit.</p>
             </div>
 
             <div id="report-container" class="hidden flex flex-col flex-1 overflow-hidden">
@@ -96,7 +96,7 @@
 
                 <div id="budget-content" class="hidden flex-1 overflow-y-auto p-5 flex flex-col gap-5">
                     <div class="bg-vesta-navy p-6 rounded-2xl text-white shadow-xl">
-                        <div class="text-[10px] font-bold uppercase opacity-50 font-bold">Page Est. Value</div>
+                        <div class="text-[10px] font-bold uppercase opacity-50">Page Est. Value</div>
                         <div class="serif text-4xl font-bold">฿<span id="total-budget">0</span></div>
                     </div>
                     <div class="bg-white rounded-xl border overflow-hidden">
@@ -118,7 +118,7 @@
                 </div>
 
                 <div class="p-5 border-t bg-white flex gap-3">
-                    <button onclick="exportSummary()" class="flex-1 border py-3 rounded-xl text-[10px] font-bold uppercase">Export Page</button>
+                    <button onclick="exportSummary()" class="flex-1 border py-3 rounded-xl text-[10px] font-bold uppercase hover:bg-gray-50">Export Page</button>
                     <button id="batch-export-btn" disabled onclick="exportBatchSummary()" class="flex-1 bg-vesta-navy text-white py-3 rounded-xl text-[10px] font-bold uppercase">Export Batch</button>
                 </div>
             </div>
@@ -180,7 +180,7 @@
             document.getElementById('empty-report').classList.add('hidden');
             document.getElementById('report-container').classList.add('hidden');
 
-            const prompt = `Analyze drawing for VESTA. DONT calculate math. Extract takeoff matching: ${JSON.stringify(Object.keys(flatPriceMap))}. Return JSON { verdict, findings: [{severity: critical|warning|info, title, description}], takeoff: [{category, qty}] }`;
+            const prompt = `Analyze drawing for VESTA Project Management. Extract takeoff matching categories: ${JSON.stringify(Object.keys(flatPriceMap))}. IMPORTANT: Identify critical procurement blockers ("รอระบุ"). Return JSON format { verdict, findings: [{severity: critical|warning|info, title, description}], takeoff: [{category, qty}] }`;
 
             try {
                 const response = await fetch('/api/analyze', {
@@ -194,13 +194,14 @@
 
                 if (!response.ok) {
                     const err = await response.json();
-                    throw new Error(`[Status ${response.status}]: ${err.error || 'Schema Error'}`);
+                    throw new Error(`[Status ${response.status}]: ${err.error || 'Connection Failed'}`);
                 }
 
                 const data = await response.json();
-                const aiResult = JSON.parse(data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim());
+                const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+                const aiResult = JSON.parse(aiText.replace(/```json|```/g, '').trim());
                 
-                // DETERMINISTIC LOGIC: Score and Takeoff Math
+                // Deterministic Calculation Logic
                 let score = 100;
                 (aiResult.findings || []).forEach(f => {
                     const s = f.severity?.toLowerCase();
@@ -213,7 +214,7 @@
                 let total = 0;
                 aiResult.budgetItems = (aiResult.takeoff || []).map(item => {
                     const ref = flatPriceMap[item.category];
-                    const rate = ref ? ref.rate : 1500;
+                    const rate = ref ? ref.rate : 1500; // Market research fallback
                     const itemTotal = item.qty * rate;
                     total += itemTotal;
                     return { ...item, total: itemTotal, priceSource: ref ? 'Official' : 'Market Research' };
@@ -226,8 +227,13 @@
                 updateBatchStats();
                 renderReport(aiResult);
 
-            } catch (err) { alert(`AUDIT ERROR:\n${err.message}`); }
-            finally { auditBtn.disabled = false; document.getElementById('loading-report').classList.add('hidden'); }
+            } catch (err) { 
+                alert(`AUDIT FAILURE:\n${err.message}`);
+                document.getElementById('empty-report').classList.remove('hidden');
+            } finally { 
+                auditBtn.disabled = false;
+                document.getElementById('loading-report').classList.add('hidden'); 
+            }
         }
 
         function updateBatchStats() {
@@ -278,30 +284,30 @@
                 grandTotal += (data.totalBudget || 0);
                 const item = document.createElement('div');
                 item.className = "bg-white p-4 rounded-xl shadow-sm border flex justify-between items-center";
-                item.innerHTML = `<div><div class="text-[10px] font-bold text-vesta-navy">PAGE ${num}</div><div class="text-[8px] text-gray-400 uppercase tracking-widest">${data.findings?.length || 0} FINDINGS</div></div><div class="text-xs font-bold">฿${(data.totalBudget || 0).toLocaleString()}</div>`;
+                item.innerHTML = `<div><div class="text-[10px] font-bold text-vesta-navy uppercase">Page ${num}</div><div class="text-[8px] text-gray-400 tracking-widest">${data.findings?.length || 0} Findings</div></div><div class="text-xs font-bold text-vesta-navy">฿${(data.totalBudget || 0).toLocaleString()}</div>`;
                 list.appendChild(item);
             });
             document.getElementById('batch-total-budget').textContent = grandTotal.toLocaleString();
         }
 
         function exportSummary() { const d = sessionAudits[pageNum]; if (d) generateTxtReport(`VESTA-Page${pageNum}`, [d], [pageNum]); }
-        function exportBatchSummary() { const p = Object.keys(sessionAudits).sort((a,b)=>a-b); generateTxtReport(`VESTA-FullSet`, p.map(x=>sessionAudits[x]), p); }
+        function exportBatchSummary() { const p = Object.keys(sessionAudits).sort((a,b)=>a-b); generateTxtReport(`VESTA-FullProject`, p.map(x=>sessionAudits[x]), p); }
 
         function generateTxtReport(prefix, dataList, pageNums) {
             const docName = document.getElementById('doc-name').textContent;
-            let content = `VESTA DRAWCHECK REPORT - ${new Date().toLocaleString()}\nDocument: ${docName}\n\n`;
+            let content = `VESTA DRAWCHECK ENTERPRISE REPORT - ${new Date().toLocaleString()}\nDocument: ${docName}\n\n`;
             let grandTotal = 0;
             dataList.forEach((data, i) => {
                 grandTotal += (data.totalBudget || 0);
-                content += `PAGE ${pageNums[i]} | SCORE: ${data.healthScore}/100 | VALUE: ฿${(data.totalBudget || 0).toLocaleString()}\n`;
+                content += `PAGE ${pageNums[i]} | READINESS: ${data.healthScore}/100 | VALUE: ฿${(data.totalBudget || 0).toLocaleString()}\n`;
                 content += `Verdict: ${data.verdict}\nFindings:\n`;
                 (data.findings || []).forEach(f => content += `- [${f.severity?.toUpperCase()}] ${f.title}: ${f.description}\n`);
-                content += `\nBudget Takeoff:\n`;
+                content += `\nDetailed Takeoff:\n`;
                 (data.budgetItems || []).forEach(item => content += `- ${item.category}: ${item.qty} | ฿${(item.total || 0).toLocaleString()}\n`);
                 content += `\n\n`;
             });
-            if (dataList.length > 1) content += `GRAND PROJECT TOTAL: ฿${grandTotal.toLocaleString()}\n\n`;
-            content += `RISK LEGEND\nCRITICAL: -15pts (Procurement Blockers)\nWARNING: -5pts (Coordination Needed)\nINFO: -2pts (Notes)`;
+            if (dataList.length > 1) content += `CONSOLIDATED PROJECT TOTAL: ฿${grandTotal.toLocaleString()}\n\n`;
+            content += `DEDUCTION LOGIC:\nCritical: -15pts (Procurement blocks)\nWarning: -5pts (Field coordination)\nInfo: -2pts (Notes)`;
             const blob = new Blob([content], { type: 'text/plain' });
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${prefix}.txt`; a.click();
         }
