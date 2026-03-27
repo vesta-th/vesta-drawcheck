@@ -260,7 +260,8 @@
             }`;
 
             try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                // LOGIC FIX: Re-routing back to the secure VESTA Vercel Proxy
+                const response = await fetch('/api/analyze', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -268,15 +269,26 @@
                         generationConfig: { temperature: 0, responseMimeType: "application/json" }
                     })
                 });
+                
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(`[Server Status ${response.status}]: ${err.error || 'Vercel Proxy Error'}`);
+                }
+
                 const data = await response.json();
+                
+                // Safely parse the AI output
+                if (!data.candidates || !data.candidates[0].content) {
+                    throw new Error("Invalid response format from VESTA AI Engine.");
+                }
                 const aiResult = JSON.parse(data.candidates[0].content.parts[0].text);
                 
                 // --- DETERMINISTIC POST-PROCESSING IN JAVASCRIPT ---
                 
                 // 1. Calculate Score (Deductive Rubric)
                 let score = 100;
-                aiResult.findings.forEach(f => {
-                    const s = f.severity.toLowerCase();
+                (aiResult.findings || []).forEach(f => {
+                    const s = f.severity?.toLowerCase();
                     if (s === 'critical') score -= 15;
                     else if (s === 'warning') score -= 5;
                     else if (s === 'info') score -= 2;
@@ -285,14 +297,17 @@
 
                 // 2. Calculate Budget (Reference Map logic)
                 let totalBudget = 0;
-                const budgetItems = aiResult.takeoffItems.map(item => {
+                // Safety fallback: AI might return 'takeoff' instead of 'takeoffItems'
+                const takeoffArray = aiResult.takeoffItems || aiResult.takeoff || [];
+                
+                const budgetItems = takeoffArray.map(item => {
                     const ref = flatPriceMap[item.category];
-                    const rate = ref ? ref.rate : 0; // Market research fallback could be added here
+                    const rate = ref ? ref.rate : 0; 
                     const priceSource = ref ? 'Official' : 'Market Research';
                     const finalRate = ref ? rate : 1500; // Market default if missing
                     const total = item.qty * finalRate;
                     totalBudget += total;
-                    return { ...item, total, priceSource };
+                    return { ...item, total, priceSource, unit: ref ? ref.unit : item.unit || 'unit' };
                 });
                 aiResult.budgetItems = budgetItems;
                 aiResult.totalBudget = totalBudget;
@@ -302,7 +317,14 @@
                 if (thumb) thumb.classList.add('has-audit');
                 updateBatchStats();
                 renderReport(aiResult);
-            } catch (err) { alert("Audit Logic Failure. Check console."); } finally { btn.disabled = false; document.getElementById('loading-report').classList.add('hidden'); }
+            } catch (err) { 
+                // Now displays the EXACT error message instead of a generic failure
+                alert(`Audit Logic Failure:\n${err.message}`); 
+                console.error(err);
+            } finally { 
+                btn.disabled = false; 
+                document.getElementById('loading-report').classList.add('hidden'); 
+            }
         }
 
         function updateBatchStats() {
