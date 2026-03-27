@@ -19,6 +19,8 @@
         .tab-active { border-bottom: 2px solid var(--burg); color: var(--navy); font-weight: 600; }
         .page-thumb { cursor: pointer; border: 2px solid transparent; transition: all 0.2s; background: white; flex-shrink: 0; position: relative; }
         .page-thumb.active { border-color: var(--burg); transform: scale(1.05); z-index: 10; }
+        .audited-dot { position: absolute; top: -4px; right: -4px; width: 10px; height: 10px; background: #10b981; border-radius: 50%; border: 2px solid white; display: none; }
+        .page-thumb.has-audit .audited-dot { display: block; }
         .btn-primary { background-color: var(--navy); color: white; transition: all 0.2s; }
         .btn-secondary { background-color: var(--burg); color: white; transition: all 0.2s; }
     </style>
@@ -27,36 +29,35 @@
 
     <header class="bg-vesta-navy h-20 flex items-center justify-between px-8 shrink-0 z-50 shadow-lg border-b border-white/5">
         <div class="flex items-center gap-6">
-            <!-- VESTA Logo -->
             <img src="VESTA_LOGO._White.Ver2.ai.png" alt="VESTA Logo" class="h-10 w-auto object-contain" onerror="this.src='https://placehold.co/200x80/203e5d/white?text=VESTA';">
-            
             <div class="h-8 w-[1px] bg-white/20 ml-2 hidden sm:block"></div>
-            
             <div class="hidden lg:block">
                 <h2 class="text-white/80 font-medium text-xs tracking-[0.15em] uppercase">DrawCheck Production Suite</h2>
-                <p class="text-[9px] text-white/40 tracking-widest uppercase font-light">Diagnostic Build v2.7</p>
+                <p class="text-[9px] text-white/40 tracking-widest uppercase font-light italic">Production Build v2.9</p>
             </div>
         </div>
         <div id="file-meta" class="hidden text-white/60 text-[10px] uppercase tracking-widest bg-black/20 px-5 py-2.5 rounded-full border border-white/10">
-            Doc: <span id="doc-name" class="text-white font-bold">--</span> | <span id="page-count">0</span> Pages
+            Set: <span id="doc-name" class="text-white font-bold">--</span> | <span id="page-count">0</span> Pages
         </div>
     </header>
 
     <main class="flex-1 flex overflow-hidden">
         <div class="flex-1 flex flex-col border-r border-gray-200 bg-white overflow-hidden">
             <div id="page-nav" class="hidden h-24 border-b border-gray-100 bg-gray-50 flex items-center gap-4 px-6 overflow-x-auto shrink-0"></div>
-
             <div id="drop-zone" class="flex-1 m-8 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center p-12 transition-all hover:border-vesta-navy cursor-pointer">
                 <div class="w-16 h-16 bg-vesta-navy rounded-xl flex items-center justify-center shadow-lg mb-6 text-white text-3xl font-bold">↑</div>
                 <h3 class="serif text-2xl font-semibold text-vesta-navy mb-2">Upload Drawing Set</h3>
+                <p class="text-center text-sm text-gray-500 max-w-sm mb-6 font-light italic">Supports Multi-page PDF Architectural Sets</p>
                 <button onclick="document.getElementById('file-input').click()" class="bg-vesta-navy text-white px-8 py-3 rounded-lg text-sm font-bold uppercase tracking-widest">Select Project File</button>
                 <input type="file" id="file-input" class="hidden" accept=".pdf,image/*" onchange="handleFile(event)">
             </div>
-
             <div id="canvas-area" class="hidden flex-1 relative bg-gray-100 flex items-center justify-center p-10 overflow-auto">
                 <canvas id="pdf-render-canvas" class="shadow-2xl bg-white"></canvas>
                 <div class="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-4">
-                    <button id="audit-btn" onclick="runAudit()" class="btn-secondary px-8 py-4 rounded-full shadow-2xl text-sm font-bold tracking-wider uppercase">Analyze Page</button>
+                    <button id="audit-btn" onclick="runAudit()" class="btn-secondary px-10 py-4 rounded-full shadow-2xl text-sm font-bold tracking-wider uppercase flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        Execute Analysis
+                    </button>
                     <button onclick="location.reload()" class="bg-white text-gray-500 px-8 py-4 rounded-full border border-gray-200 text-sm font-bold uppercase shadow-md">Cancel</button>
                 </div>
             </div>
@@ -64,29 +65,59 @@
 
         <div class="w-[440px] flex flex-col bg-slate-50 shadow-inner overflow-hidden">
             <div class="flex bg-white border-b border-gray-200 shrink-0">
-                <button id="tab-findings" onclick="switchTab('findings')" class="flex-1 py-5 text-[10px] font-bold tracking-widest uppercase tab-active transition-all">Audit</button>
-                <button id="tab-budget" onclick="switchTab('budget')" class="flex-1 py-5 text-[10px] font-bold tracking-widest uppercase text-gray-400 hover:text-vesta-navy transition-all">Takeoff</button>
+                <button id="tab-findings" onclick="switchTab('findings')" class="flex-1 py-5 text-[10px] font-bold tracking-widest uppercase tab-active">Audit</button>
+                <button id="tab-budget" onclick="switchTab('budget')" class="flex-1 py-5 text-[10px] font-bold tracking-widest uppercase text-gray-400">Takeoff</button>
+                <button id="tab-batch" onclick="switchTab('batch')" class="flex-1 py-5 text-[10px] font-bold tracking-widest uppercase text-gray-400 flex items-center justify-center gap-1">
+                    Batch <span id="batch-badge" class="bg-vesta-navy text-white px-2 py-0.5 rounded-full text-[8px]">0</span>
+                </button>
             </div>
-
-            <div id="loading-report" class="hidden flex-1 flex flex-col items-center justify-center p-12">
-                <div class="w-10 h-10 border-4 border-t-vesta-burg rounded-full animate-spin mb-4"></div>
-                <p class="serif text-lg text-vesta-navy italic font-medium">Connecting to VESTA AI...</p>
+            <div id="loading-report" class="hidden flex-1 flex flex-col items-center justify-center p-12 text-center">
+                <div class="w-12 h-12 border-4 border-t-vesta-burg rounded-full animate-spin mb-4"></div>
+                <p class="serif text-lg italic text-vesta-navy">Analyzing Drawing...</p>
+                <p class="text-[9px] text-gray-400 uppercase tracking-widest mt-2">Deductive Rubric Calibration</p>
             </div>
-
             <div id="empty-report" class="flex-1 flex flex-col items-center justify-center p-12 text-center opacity-40">
-                <p class="text-sm font-light italic">Waiting for analysis execution...</p>
+                <p class="text-sm font-light italic">Waiting for analysis...</p>
             </div>
-
             <div id="report-container" class="hidden flex flex-col flex-1 overflow-hidden">
                 <div id="findings-content" class="flex-1 overflow-y-auto p-5 flex flex-col gap-5">
-                    <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm relative overflow-hidden">
-                        <span class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Readiness Score</span>
-                        <div class="serif text-5xl font-bold text-vesta-navy tracking-tighter" id="health-score">--</div>
+                    <div class="bg-white p-6 rounded-2xl border mb-2 shadow-sm">
+                        <span class="text-[10px] font-bold uppercase text-gray-400">Validated Readiness</span>
+                        <div class="serif text-5xl font-bold text-vesta-navy" id="health-score">--</div>
                         <div class="w-full h-1.5 bg-gray-100 rounded-full mt-3 overflow-hidden">
                             <div id="health-bar" class="h-full bg-vesta-navy transition-all duration-1000" style="width: 0%"></div>
                         </div>
+                        <p id="verdict-text" class="text-[11px] text-gray-500 mt-4 italic"></p>
                     </div>
-                    <div id="findings-list" class="flex flex-col gap-3 pb-4"></div>
+                    <div id="findings-list" class="space-y-3"></div>
+                </div>
+
+                <div id="budget-content" class="hidden flex-1 overflow-y-auto p-5 flex flex-col gap-5">
+                    <div class="bg-vesta-navy p-6 rounded-2xl text-white shadow-xl">
+                        <div class="text-[10px] font-bold uppercase opacity-50">Page Est. Value</div>
+                        <div class="serif text-4xl font-bold">฿<span id="total-budget">0</span></div>
+                    </div>
+                    <div class="bg-white rounded-xl border overflow-hidden">
+                        <table class="w-full text-left text-[11px]">
+                            <thead class="bg-gray-50 text-[9px] uppercase font-bold text-gray-400">
+                                <tr><th class="px-4 py-3">Item</th><th class="px-4 py-3 text-right">Qty</th><th class="px-4 py-3 text-right">Total</th></tr>
+                            </thead>
+                            <tbody id="budget-table-body" class="divide-y divide-gray-50"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="batch-content" class="hidden flex-1 overflow-y-auto p-5 flex flex-col gap-5">
+                    <div class="bg-vesta-burg p-6 rounded-2xl text-white shadow-xl">
+                        <div class="text-[10px] font-bold uppercase opacity-50">Consolidated Project Total</div>
+                        <div class="serif text-4xl font-bold">฿<span id="batch-total-budget">0</span></div>
+                    </div>
+                    <div id="batch-summary-list" class="space-y-3"></div>
+                </div>
+
+                <div class="p-5 border-t bg-white flex gap-3">
+                    <button onclick="exportSummary()" class="flex-1 border py-3 rounded-xl text-[10px] font-bold uppercase hover:bg-gray-50 transition-colors">Export Page</button>
+                    <button id="batch-export-btn" disabled onclick="exportBatchSummary()" class="flex-1 btn-primary py-3 rounded-xl text-[10px] font-bold uppercase">Export Batch</button>
                 </div>
             </div>
         </div>
@@ -94,11 +125,17 @@
 
     <script>
         let pdfDoc = null, pageNum = 1, currentImageBase64 = null, sessionAudits = {}; 
+        
+        // Price Master Integration
+        const priceMaster = { "categories": { "Built-in Furniture": { "High-Cabinet (Kitchen/Wardrobe)": { "rate": 22000, "unit": "m" }, "Low-Cabinet (Base/TV Console)": { "rate": 15000, "unit": "m" }, "Shelving Unit": { "rate": 8500, "unit": "m" } }, "Wall & Ceiling Finishes": { "Wallpaper (Premium)": { "rate": 850, "unit": "sqm" }, "Wall Paneling (Wood/MDF)": { "rate": 4500, "unit": "sqm" }, "Marble Cladding": { "rate": 12000, "unit": "sqm" }, "Painting (Internal)": { "rate": 250, "unit": "sqm" } }, "Flooring": { "SPC Flooring": { "rate": 1000, "unit": "sqm" }, "Engineered Wood": { "rate": 3500, "unit": "sqm" } }, "MEP & Lighting": { "Lighting Point": { "rate": 1800, "unit": "point" }, "Power Outlet": { "rate": 1500, "unit": "point" } } } };
+        const flatPriceMap = {};
+        Object.values(priceMaster.categories).forEach(cat => Object.keys(cat).forEach(item => flatPriceMap[item] = cat[item]));
+
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
         async function handleFile(e) {
             const file = e.target.files[0]; if (!file) return;
-            document.getElementById('drop-zone').classList.add('hidden');
+            sessionAudits = {}; document.getElementById('drop-zone').classList.add('hidden');
             document.getElementById('doc-name').textContent = file.name;
             if (file.type === "application/pdf") {
                 const ab = await file.arrayBuffer(); pdfDoc = await pdfjsLib.getDocument(ab).promise;
@@ -114,7 +151,7 @@
             for (let i = 1; i <= Math.min(pdfDoc.numPages, 100); i++) {
                 const btn = document.createElement('div');
                 btn.className = `page-thumb h-16 w-12 border shadow-sm flex items-center justify-center text-[10px] font-bold rounded ${i===pageNum?'active':''}`;
-                btn.innerHTML = `P${i}`;
+                btn.id = `thumb-${i}`; btn.innerHTML = `P${i}`;
                 btn.onclick = () => renderPage(i); nav.appendChild(btn);
             }
         }
@@ -126,6 +163,10 @@
             await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
             currentImageBase64 = cv.toDataURL('image/jpeg', 0.8).split(',')[1];
             document.getElementById('canvas-area').classList.remove('hidden');
+            document.querySelectorAll('.page-thumb').forEach(t => t.classList.remove('active'));
+            document.getElementById(`thumb-${num}`).classList.add('active');
+            if (sessionAudits[pageNum]) renderReport(sessionAudits[pageNum]);
+            else { document.getElementById('empty-report').classList.remove('hidden'); document.getElementById('report-container').classList.add('hidden'); }
         }
 
         async function runAudit() {
@@ -134,26 +175,27 @@
             document.getElementById('empty-report').classList.add('hidden');
             document.getElementById('report-container').classList.add('hidden');
 
+            const prompt = `Analyze this drawing page for VESTA. DONT calculate score or price. Return JSON: { verdict, findings: [{severity, title, description}], takeoff: [{category, qty}] }. Categories: ${JSON.stringify(Object.keys(flatPriceMap))}`;
+
             try {
-                // THE SECURE CALL TO OUR PROXY
                 const response = await fetch('/api/analyze', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        contents: [{ parts: [{ text: "Analyze this drawing page for VESTA. Return JSON { findings: [], takeoff: [], verdict: '' }" }, { inlineData: { mimeType: "image/jpeg", data: currentImageBase64 } }] }],
+                        contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: "image/jpeg", data: currentImageBase64 } }] }],
                         generationConfig: { temperature: 0, responseMimeType: "application/json" }
                     })
                 });
 
                 if (!response.ok) {
-                    const errorJson = await response.json();
-                    throw new Error(`[Status ${response.status}]: ${errorJson.error || 'Unknown Server Error'}`);
+                    const err = await response.json();
+                    throw new Error(`[Status ${response.status}]: ${err.error || 'Server connection issue'}`);
                 }
 
                 const data = await response.json();
                 const aiResult = JSON.parse(data.candidates[0].content.parts[0].text);
                 
-                // DETERMINISTIC SCORING LOGIC
+                // DETERMINISTIC MATH (The Key to Consistency)
                 let score = 100;
                 aiResult.findings.forEach(f => {
                     const s = f.severity.toLowerCase();
@@ -162,29 +204,99 @@
                     else if (s === 'info') score -= 2;
                 });
                 aiResult.healthScore = Math.max(0, score);
+
+                let total = 0;
+                aiResult.budgetItems = (aiResult.takeoff || []).map(item => {
+                    const ref = flatPriceMap[item.category];
+                    const rate = ref ? ref.rate : 1500;
+                    const itemTotal = item.qty * rate;
+                    total += itemTotal;
+                    return { ...item, total: itemTotal, priceSource: ref ? 'Official' : 'Market Research' };
+                });
+                aiResult.totalBudget = total;
+
+                sessionAudits[pageNum] = aiResult;
+                document.getElementById(`thumb-${pageNum}`).classList.add('has-audit');
+                updateBatchStats();
                 renderReport(aiResult);
 
-            } catch (err) {
-                // This alert now shows the SPECIFIC error from the proxy
-                alert(`TECHNICAL AUDIT FAILURE:\n${err.message}\n\nREQUIRED ACTIONS:\n1. If Status 404: The 'api' folder is missing in GitHub.\n2. If Status 500: GEMINI_API_KEY is missing/wrong in Vercel settings.\n3. Make sure to REDEPLOY in Vercel after changing settings.`);
-            } finally {
-                document.getElementById('loading-report').classList.add('hidden');
-            }
+            } catch (err) { alert(`AUDIT ERROR:\n${err.message}`); }
+            finally { document.getElementById('loading-report').classList.add('hidden'); }
+        }
+
+        function updateBatchStats() {
+            const keys = Object.keys(sessionAudits);
+            document.getElementById('batch-badge').textContent = keys.length;
+            document.getElementById('batch-export-btn').disabled = keys.length === 0;
         }
 
         function renderReport(data) {
             document.getElementById('report-container').classList.remove('hidden');
             document.getElementById('health-score').textContent = data.healthScore + '%';
             document.getElementById('health-bar').style.width = data.healthScore + '%';
+            document.getElementById('verdict-text').textContent = data.verdict || "";
+            
             const fList = document.getElementById('findings-list'); fList.innerHTML = "";
             data.findings.forEach(f => {
-                const d = document.createElement('div'); d.className = "bg-white p-4 rounded-xl border-l-4 border-burg shadow-sm text-xs";
-                d.innerHTML = `<div class="font-bold text-vesta-navy mb-1 uppercase tracking-wider">${f.title}</div><p class="text-gray-500">${f.description}</p>`;
+                const d = document.createElement('div'); 
+                d.className = "bg-white p-4 rounded-xl border-l-4 border-burg shadow-sm text-xs";
+                d.innerHTML = `<div class="font-bold text-vesta-navy mb-1 uppercase tracking-widest">${f.title}</div><p class="text-gray-500 font-light">${f.description}</p>`;
                 fList.appendChild(d);
             });
+
+            document.getElementById('total-budget').textContent = data.totalBudget.toLocaleString();
+            const bTable = document.getElementById('budget-table-body'); bTable.innerHTML = "";
+            data.budgetItems.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td class="px-4 py-3 font-medium">${item.category}</td><td class="px-4 py-3 text-right">${item.qty}</td><td class="px-4 py-3 text-right font-bold text-vesta-navy">฿${item.total.toLocaleString()}</td>`;
+                bTable.appendChild(row);
+            });
+            switchTab('findings');
         }
 
-        function switchTab(t) { /* Simple navigation toggle */ }
+        function switchTab(tab) {
+            ['findings', 'budget', 'batch'].forEach(t => {
+                const btn = document.getElementById('tab-' + t), cont = document.getElementById(t + '-content');
+                if (t === tab) { btn.classList.add('tab-active'); btn.classList.remove('text-gray-400'); cont.classList.remove('hidden'); }
+                else { btn.classList.remove('tab-active'); btn.classList.add('text-gray-400'); cont.classList.add('hidden'); }
+            });
+            if (tab === 'batch') renderBatchSummary();
+        }
+
+        function renderBatchSummary() {
+            const list = document.getElementById('batch-summary-list'); list.innerHTML = "";
+            let grandTotal = 0;
+            Object.entries(sessionAudits).forEach(([num, data]) => {
+                grandTotal += data.totalBudget;
+                const item = document.createElement('div');
+                item.className = "bg-white p-4 rounded-xl shadow-sm border flex justify-between items-center";
+                item.innerHTML = `<div><div class="text-[10px] font-bold text-vesta-navy">PAGE ${num}</div><div class="text-[8px] text-gray-400 uppercase tracking-widest">${data.findings.length} FINDINGS</div></div><div class="text-xs font-bold">฿${data.totalBudget.toLocaleString()}</div>`;
+                list.appendChild(item);
+            });
+            document.getElementById('batch-total-budget').textContent = grandTotal.toLocaleString();
+        }
+
+        function exportSummary() { const d = sessionAudits[pageNum]; if (d) generateTxtReport(`VESTA-Page${pageNum}`, [d], [pageNum]); }
+        function exportBatchSummary() { const p = Object.keys(sessionAudits).sort((a,b)=>a-b); generateTxtReport(`VESTA-FullSet`, p.map(x=>sessionAudits[x]), p); }
+
+        function generateTxtReport(prefix, dataList, pageNums) {
+            const docName = document.getElementById('doc-name').textContent;
+            let content = `VESTA DRAWCHECK REPORT - ${new Date().toLocaleString()}\nDocument: ${docName}\n\n`;
+            let grandTotal = 0;
+            dataList.forEach((data, i) => {
+                grandTotal += data.totalBudget;
+                content += `PAGE ${pageNums[i]} | SCORE: ${data.healthScore}/100 | VALUE: ฿${data.totalBudget.toLocaleString()}\n`;
+                content += `Verdict: ${data.verdict}\nFindings:\n`;
+                data.findings.forEach(f => content += `- [${f.severity.toUpperCase()}] ${f.title}: ${f.description}\n`);
+                content += `\nBudget Takeoff:\n`;
+                data.budgetItems.forEach(item => content += `- ${item.category}: ${item.qty} | ฿${item.total.toLocaleString()}\n`);
+                content += `\n\n`;
+            });
+            if (dataList.length > 1) content += `GRAND PROJECT TOTAL: ฿${grandTotal.toLocaleString()}\n\n`;
+            content += `RISK LEGEND\nCRITICAL: -15pts (Procurement Blockers)\nWARNING: -5pts (Coordination Needed)\nINFO: -2pts (Notes)`;
+            const blob = new Blob([content], { type: 'text/plain' });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${prefix}.txt`; a.click();
+        }
     </script>
 </body>
 </html>
