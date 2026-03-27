@@ -239,28 +239,29 @@
             document.getElementById('empty-report').classList.add('hidden');
             document.getElementById('report-container').classList.add('hidden');
 
-            const prompt = `You are the VESTA Senior Project Architect. Analyze this drawing with 100% precision logic.
+            const prompt = `You are the VESTA Senior Project Architect & Quantity Surveyor. Analyze this drawing with 100% precision logic.
             
-            REFERENCE CATEGORIES (MANDATORY KEYS):
+            REFERENCE CATEGORIES (PREFER THESE WHEN POSSIBLE):
             ${JSON.stringify(Object.keys(flatPriceMap))}
 
             CRITICAL DIMENSION & TAKEOFF RULES:
-            1. READ WRITTEN TEXT: Do NOT estimate visually. Find the overall dimension lines written on the drawing (e.g., 1600, 750).
+            1. READ WRITTEN TEXT: Find the overall dimension lines written on the drawing.
             2. UNIT CONVERSION: Dimensions are in millimeters (mm). Convert to meters (m) by dividing by 1000.
-            3. DRAFTING VIEWS (DE-DUPLICATION): The drawing contains multiple views (Plan, Elevation, Section) of the SAME object. Do NOT count them as separate items. Consolidate into ONE takeoff item per furniture tag (e.g., BF-08).
-            4. CLASSIFICATION THRESHOLDS:
-               - "Low-Cabinet (Base/TV Console)": Overall Height is UNDER 1200mm (1.2m).
-               - "High-Cabinet (Kitchen/Wardrobe)": Overall Height is 1200mm (1.2m) or GREATER.
-            5. QUANTITY LOGIC:
-               - Built-in Furniture ("m"): Use the OVERALL WIDTH in meters. Do NOT count internal shelves.
-               - Wall Finishes ("sqm"): Multiply OVERALL WIDTH x OVERALL HEIGHT in meters.
-            6. DO NOT CALCULATE THE TOTAL PRICE OR HEALTH SCORE.
+            3. HYBRID TAKEOFF LOGIC (OFFICIAL vs ASSUMED):
+               - First, try to match items to the REFERENCE CATEGORIES above.
+               - IMPORTANT: If an item is clearly shown (e.g., Countertops, Backsplashes, Sinks, Stoves, Appliances) but NOT in the list, YOU MUST STILL EXTRACT IT. 
+               - For these unlisted items, you must estimate a realistic 'market_rate' (Unit Price in THB) based on mid-to-premium Thai interior construction standards.
+            4. RISK AUDIT LOGIC (STRICT SEVERITY):
+               - CRITICAL: Any text mentioning "รอระบุ" (To Be Advised/Specified), especially for appliances. Missing appliance specs block countertop fabrication and the critical path!
+               - WARNING: Any text mentioning "เช็คระยะหน้างาน" (Verify In Field / V.I.F.) or "หน้างาน" (On-site).
+               - INFO: General notes or missing minor details.
+            5. DRAFTING VIEWS (DE-DUPLICATION): Consolidate multiple views (Plan, Elevation) into ONE takeoff item per furniture tag (e.g., BF-10).
 
             Return JSON ONLY:
             {
                 "verdict": "string summary",
                 "findings": [{ "severity": "critical|warning|info", "title": "string", "description": "string" }],
-                "takeoffItems": [{ "category": "Exact Category Name", "qty": 0.00, "unit": "m|sqm|point" }]
+                "takeoffItems": [{ "category": "Category Name", "qty": 0.00, "unit": "m|sqm|piece|point", "market_rate": 0 }]
             }`;
 
             try {
@@ -299,20 +300,27 @@
                 });
                 aiResult.healthScore = Math.max(0, score);
 
-                // 2. Calculate Budget (Reference Map logic)
+                // 2. Calculate Budget (Reference Map logic + Dynamic Market Rates)
                 let totalBudget = 0;
                 // Safety fallback: AI might return 'takeoff' instead of 'takeoffItems'
                 const takeoffArray = aiResult.takeoffItems || aiResult.takeoff || [];
                 
                 const budgetItems = takeoffArray.map(item => {
                     const ref = flatPriceMap[item.category];
-                    const rate = ref ? ref.rate : 0; 
-                    const priceSource = ref ? 'Official' : 'Market Research';
-                    const finalRate = ref ? rate : 1500; // Market default if missing
+                    const isOfficial = !!ref;
+                    
+                    // If official, use DB rate. If not, use the AI's researched market_rate.
+                    // Fallback to 0 only if AI completely fails to provide a number.
+                    const finalRate = isOfficial ? ref.rate : (item.market_rate || 0); 
+                    const priceSource = isOfficial ? 'Official' : 'Market Research';
+                    const unit = isOfficial ? ref.unit : (item.unit || 'unit');
+                    
                     const total = item.qty * finalRate;
                     totalBudget += total;
-                    return { ...item, total, priceSource, unit: ref ? ref.unit : item.unit || 'unit' };
+                    
+                    return { ...item, total, priceSource, unit, rateUsed: finalRate };
                 });
+                
                 aiResult.budgetItems = budgetItems;
                 aiResult.totalBudget = totalBudget;
 
